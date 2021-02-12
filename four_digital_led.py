@@ -1,4 +1,5 @@
 #encoding:utf-8
+#!/usr/bin/env python3
 
 import TM1637
 
@@ -35,7 +36,16 @@ LED_FONTS = {
     '9:':  0xef,
     'a':   0x77,
     'c':   0x39,
-    'o':   0x63,
+    'e':   0x79,
+    'i':   0x06,
+    'f':   0x71,
+    'l':   0x38,
+    'p':   0x73,
+    'q':   0x6f,
+    's':   0xed,
+    'u':   0x3e,
+    '-':   0x40,     #负号
+    'o':   0x63,     #摄氏度的小圆圈
     'blank': 0x00,
 }
 
@@ -118,15 +128,15 @@ if __name__ == "__main__":
             time_hour = now_time[3]
             time_min  = now_time[4]
             #time_sec  = now_time[5]
-            hour_ge  = time_hour % 10
-            hour_shi = int(time_hour / 10)
+            hour_ge  = time_hour % 10      #小时树的个位数
+            hour_shi = int(time_hour / 10) #小时数的十位数
             min_ge   = time_min % 10
             min_shi  = int(time_min / 10)
             if hour_shi:
                 hour_shi_led_font = LED_FONTS['%d'%hour_shi]
             else:
                 hour_shi_led_font = LED_FONTS['blank']
-            dp = dp ^ 1
+            dp = dp ^ 1  # 冒号显示，每秒亮暗交替。异或：相同为0,不同为1
             if dp:
                 led.write_data(hour_shi_led_font, LED_FONTS['%d:'%hour_ge], LED_FONTS['%d'%min_shi], LED_FONTS['%d'%min_ge])
             else:
@@ -151,13 +161,29 @@ if __name__ == "__main__":
         led.display()
         time.sleep(delay)
 
+        cpu_temp = -1
         with open('/sys/class/thermal/thermal_zone0/temp', 'r') as fn:
             cpu_temp = int(float(fn.read()) /1000)
         #print("CPU Tempture: ", cpu_temp, '\'C')
-        cpu_temp_shi = cpu_temp / 10
-        cpu_temp_ge  = cpu_temp % 10
-        led.write_data(LED_FONTS['%d'%cpu_temp_shi], LED_FONTS['%d'%cpu_temp_ge], LED_FONTS['o'], LED_FONTS['c'])
-        led.display()
+        if not cpu_temp == -1:
+            cpu_temp_shi = cpu_temp / 10
+            cpu_temp_ge  = cpu_temp % 10
+            data_queue = [ LED_FONTS['blank'], LED_FONTS['c'], LED_FONTS['p'], LED_FONTS['u'], LED_FONTS['blank'], \
+                           LED_FONTS['%d'%cpu_temp_shi], LED_FONTS['%d'%cpu_temp_ge], LED_FONTS['o'], LED_FONTS['c']]
+            display_queue = [LED_FONTS['blank'], LED_FONTS['blank'], LED_FONTS['blank'], LED_FONTS['blank']]
+
+            # 流水灯模式， 向左移动
+            i = 0
+            while ( i < len(data_queue) ):
+                display_queue.pop(0)
+                display_queue.append(data_queue[i])
+                led.write_data(display_queue[0], display_queue[1], display_queue[2], display_queue[3])
+                led.display()
+                i += 1
+                time.sleep(0.6)
+        else:
+            led.write_data(LED_FONTS['blank'], LED_FONTS['blank'], LED_FONTS['e'], LED_FONTS['3'])
+            led.display()
         time.sleep(delay)
 
         
