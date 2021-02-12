@@ -1,5 +1,5 @@
-#encoding:utf-8
 #!/usr/bin/env python3
+#encoding:utf-8
 
 import TM1637
 
@@ -162,27 +162,29 @@ if __name__ == "__main__":
         time.sleep(delay)
 
         cpu_temp = -1
-        with open('/sys/class/thermal/thermal_zone0/temp', 'r') as fn:
+        try:
+            fn = open('/sys/class/thermal/thermal_zone0/temp', 'r') 
             cpu_temp = int(float(fn.read()) /1000)
+            fn.close()
+        except:
+            pass
         #print("CPU Tempture: ", cpu_temp, '\'C')
         if not cpu_temp == -1:
-            cpu_temp_shi = cpu_temp / 10
-            cpu_temp_ge  = cpu_temp % 10
-            data_queue = [ LED_FONTS['blank'], LED_FONTS['c'], LED_FONTS['p'], LED_FONTS['u'], LED_FONTS['blank'], \
-                           LED_FONTS['%d'%cpu_temp_shi], LED_FONTS['%d'%cpu_temp_ge], LED_FONTS['o'], LED_FONTS['c']]
+            cpu_temp_shi  = cpu_temp / 10
+            cpu_temp_ge   = cpu_temp % 10
+            data_queue    = [ LED_FONTS['blank'], LED_FONTS['c'], LED_FONTS['p'], LED_FONTS['u'], LED_FONTS['blank'], \
+                              LED_FONTS['%d'%cpu_temp_shi], LED_FONTS['%d'%cpu_temp_ge], LED_FONTS['o'], LED_FONTS['c'] ]
             display_queue = [LED_FONTS['blank'], LED_FONTS['blank'], LED_FONTS['blank'], LED_FONTS['blank']]
 
             # 流水灯模式， 向左移动
-            i = 0
-            while ( i < len(data_queue) ):
+            for i in range( len(data_queue) ):
                 display_queue.pop(0)
                 display_queue.append(data_queue[i])
                 led.write_data(display_queue[0], display_queue[1], display_queue[2], display_queue[3])
                 led.display()
-                i += 1
                 time.sleep(0.6)
         else:
-            led.write_data(LED_FONTS['blank'], LED_FONTS['blank'], LED_FONTS['e'], LED_FONTS['3'])
+            led.write_data(LED_FONTS['blank'], LED_FONTS['e'], LED_FONTS['-'], LED_FONTS['3'])
             led.display()
         time.sleep(delay)
 
