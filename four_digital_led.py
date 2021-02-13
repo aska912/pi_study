@@ -1,7 +1,8 @@
-#encoding:utf-8
 #!/usr/bin/env python3
+#encoding:utf-8
 
 import TM1637
+import DHT11
 
 #------------------------------------------------------------------------
 #               
@@ -34,16 +35,18 @@ LED_FONTS = {
     '7:':  0x87,
     '8:':  0xff,
     '9:':  0xef,
-    'a':   0x77,
-    'c':   0x39,
-    'e':   0x79,
-    'i':   0x06,
-    'f':   0x71,
-    'l':   0x38,
-    'p':   0x73,
+    'A':   0x77,
+    'C':   0x39,
+    'E':   0x79,
+    'H':   0x76,
+    'I':   0x06,
+    'F':   0x71,
+    'L':   0x38,
+    'P':   0x73,
     'q':   0x6f,
-    's':   0xed,
-    'u':   0x3e,
+    'S':   0xed,
+    'U':   0x3e,
+    'r':   0x50,
     '-':   0x40,     #负号
     'o':   0x63,     #摄氏度的小圆圈
     'blank': 0x00,
@@ -114,10 +117,15 @@ if __name__ == "__main__":
 
     clk = 16
     dio = 18
+    dht_pin = 36
     delay = 6
+
+    previous_dht11_data = []
 
     led = four_digital_led(clk, dio)
     led.adjust_brightness(MIN_BRIGHTNRSS)
+    dht11 = DHT11.DHT11(dht_pin)
+
     while True:
 
         dp = 0
@@ -162,31 +170,72 @@ if __name__ == "__main__":
         time.sleep(delay)
 
         cpu_temp = -1
-        with open('/sys/class/thermal/thermal_zone0/temp', 'r') as fn:
+        try:
+            fn = open('/sys/class/thermal/thermal_zone0/temp', 'r') 
             cpu_temp = int(float(fn.read()) /1000)
+            fn.close()
+        except:
+            pass
         #print("CPU Tempture: ", cpu_temp, '\'C')
         if not cpu_temp == -1:
-            cpu_temp_shi = cpu_temp / 10
-            cpu_temp_ge  = cpu_temp % 10
-            data_queue = [ LED_FONTS['blank'], LED_FONTS['c'], LED_FONTS['p'], LED_FONTS['u'], LED_FONTS['blank'], \
-                           LED_FONTS['%d'%cpu_temp_shi], LED_FONTS['%d'%cpu_temp_ge], LED_FONTS['o'], LED_FONTS['c']]
+            cpu_temp_shi  = cpu_temp / 10
+            cpu_temp_ge   = cpu_temp % 10
+            data_queue    = [ LED_FONTS['blank'], LED_FONTS['C'], LED_FONTS['P'], LED_FONTS['U'], LED_FONTS['-'], \
+                              LED_FONTS['%d'%cpu_temp_shi], LED_FONTS['%d'%cpu_temp_ge], LED_FONTS['o'], LED_FONTS['C'] ]
             display_queue = [LED_FONTS['blank'], LED_FONTS['blank'], LED_FONTS['blank'], LED_FONTS['blank']]
 
             # 流水灯模式， 向左移动
-            i = 0
-            while ( i < len(data_queue) ):
+            for i in range( len(data_queue) ):
                 display_queue.pop(0)
                 display_queue.append(data_queue[i])
                 led.write_data(display_queue[0], display_queue[1], display_queue[2], display_queue[3])
                 led.display()
-                i += 1
                 time.sleep(0.6)
         else:
-            led.write_data(LED_FONTS['blank'], LED_FONTS['blank'], LED_FONTS['e'], LED_FONTS['3'])
+            led.write_data(LED_FONTS['E'], LED_FONTS['r'], LED_FONTS['r'], LED_FONTS['1'])
             led.display()
+        time.sleep(3)
+
+        dht_data = dht11.get()
+        if dht_data[0]:
+            temp = int(dht_data[1])
+            humi = int(dht_data[2])
+            temp_ge  = temp % 10
+            temp_shi = temp / 10
+            humi_ge  = humi % 10
+            humi_shi = humi / 10
+            previous_dht11_data = dht_data
+        else:
+            if not len(previous_dht11_data):
+                led.write_data(LED_FONTS['E'], LED_FONTS['r'], LED_FONTS['r'], LED_FONTS['2'])
+                led.display()
+                time.sleep(delay)
+                continue
+
+            temp = int(previous_dht11_data[1])
+            humi = int(previous_dht11_data[2])
+            temp_ge  = temp % 10
+            temp_shi = temp / 10
+            humi_ge  = humi % 10
+            humi_shi = humi / 10
+
+        data_queue    = [ LED_FONTS['blank'], LED_FONTS['H'], LED_FONTS['-'], LED_FONTS['%d'%temp_shi], LED_FONTS['%d'%temp_ge], LED_FONTS['o'], LED_FONTS['C'] ]
+        display_queue = [LED_FONTS['blank'], LED_FONTS['blank'], LED_FONTS['blank'], LED_FONTS['blank']]
+
+        # 流水灯模式， 向左移动
+        for i in range( len(data_queue) ):
+            display_queue.pop(0)
+            display_queue.append(data_queue[i])
+            led.write_data(display_queue[0], display_queue[1], display_queue[2], display_queue[3])
+            led.display()
+            time.sleep(0.6)
         time.sleep(delay)
 
-        
+        led.write_data(LED_FONTS['H'], LED_FONTS['-'], LED_FONTS['%d'%humi_shi], LED_FONTS['%d'%humi_ge])
+        led.display()
+        time.sleep(delay)
+
+
 
 
 
