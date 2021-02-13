@@ -1,8 +1,6 @@
 #encoding:utf-8
 
 import RPi.GPIO as GPIO
-from time import sleep
-
 
 Hight = 1
 Low   = 0
@@ -99,8 +97,11 @@ class TM1637:
         GPIO.output(self.__dio, Hight)
         GPIO.output(self.__clk, Hight)
         GPIO.setup(self.__dio, GPIO.IN)
-        while( GPIO.input(self.__dio) ):
-            pass
+        for i in range(10):
+            if GPIO.input(self.__dio) == Hight:
+                break
+        #while( GPIO.input(self.__dio) ):
+        #    pass
         GPIO.setup(self.__dio, GPIO.OUT)
 
     def __send_cfg_cmd(self, cmd):
